@@ -1,6 +1,6 @@
-package aut.ap;
+package app.entry;
 
-import aut.ap.account.User;
+import app.models.User;
 import org.hibernate.query.Query;
 import java.util.Scanner;
 import org.hibernate.Session;
@@ -9,85 +9,85 @@ import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
 
 public class Main {
-    private static SessionFactory sessionFactory;
+    private static SessionFactory factory;
 
-    private static void setUpSessionFactory() {
-        sessionFactory = new Configuration()
+    private static void initializeFactory() {
+        factory = new Configuration()
                 .configure("hibernate.cfg.xml")
                 .buildSessionFactory();
     }
 
-    private static void closeSessionFactory() {
-        sessionFactory.close();
+    private static void shutdownFactory() {
+        if (factory != null) factory.close();
     }
 
     public static void main(String[] args) {
-        Scanner scn = new Scanner(System.in);
-        setUpSessionFactory();
-        Session session = sessionFactory.openSession();
+        Scanner input = new Scanner(System.in);
+        initializeFactory();
+        Session dbSession = factory.openSession();
 
-        System.out.println("Login: L");
-        System.out.print("Sing up: S");
-        System.out.println();
-        String string = scn.nextLine();
+        System.out.println("To log in, enter: L");
+        System.out.print("To register, enter: S\n");
 
-        if (string.equals("L")) {
-            System.out.println("Email: ");
-            String email = scn.nextLine();
-            System.out.println("Password: ");
-            String password = scn.nextLine();
+        String command = input.nextLine();
+
+        if (command.equalsIgnoreCase("L")) {
+            System.out.print("Email: ");
+            String enteredEmail = input.nextLine();
+            System.out.print("Password: ");
+            String enteredPassword = input.nextLine();
 
             try {
-                Transaction tx = session.beginTransaction();
-                String hql = "FROM User WHERE email = :email";
-                Query<User> query = session.createQuery(hql, User.class);
-                query.setParameter("email", email);
-                User account = query.uniqueResult();
+                Transaction tx = dbSession.beginTransaction();
+                Query<User> userQuery = dbSession
+                        .createQuery("FROM User WHERE email = :mail", User.class);
+                userQuery.setParameter("mail", enteredEmail);
+                User foundUser = userQuery.uniqueResult();
 
-                if (account == null) {
-                    System.out.println("Invalid email");
-                    return;
+                if (foundUser == null) {
+                    System.out.println("No user found with this email.");
+                } else if (!foundUser.getPassword().equals(enteredPassword)) {
+                    System.out.println("Incorrect password.");
+                } else {
+                    System.out.println("Hello, " + foundUser.getFirst_name() + " " + foundUser.getLast_name() + "!");
                 }
-                else if (!account.getPassword().equals(password)) {
-                    System.out.println("Password does not match");
-                    return;
-                }
-                System.out.println("Welcome, " + account.getFirst_name() + " " + account.getLast_name() + "!");
 
                 tx.commit();
             } catch (Exception e) {
-                System.out.println(e.getMessage());
+                System.out.println("Error: " + e.getMessage());
             }
         }
-        else if (string.equals("S")) {
-            System.out.println("First Name: ");
-            String firstName = scn.nextLine();
-            System.out.println("Last Name: ");
-            String lastName = scn.nextLine();
-            System.out.println("Age: ");
-            Integer age = Integer.parseInt(scn.nextLine());
-            System.out.println("Email: ");
-            String email = scn.nextLine();
-            System.out.println("Password: ");
-            String password = scn.nextLine();
+
+        else if (command.equalsIgnoreCase("S")) {
+            System.out.print("First Name: ");
+            String fname = input.nextLine();
+            System.out.print("Last Name: ");
+            String lname = input.nextLine();
+            System.out.print("Age: ");
+            int age = Integer.parseInt(input.nextLine());
+            System.out.print("Email: ");
+            String mail = input.nextLine();
+            System.out.print("Password: ");
+            String pass = input.nextLine();
 
             try {
-                Transaction tx = session.beginTransaction();
-                User account = new User(firstName, lastName, age, email, password);
-                session.persist(account);
-
+                Transaction tx = dbSession.beginTransaction();
+                User newUser = new User(fname, lname, age, mail, pass);
+                dbSession.persist(newUser);
                 tx.commit();
-                System.out.println("Welcome, " + account.getFirst_name() + " " + account.getLast_name() + "!");
-            } catch (IllegalArgumentException e) {
-                System.out.println(e.getMessage());
-            } catch (Exception e) {
-                System.out.println("An account with this email already exists");
+                System.out.println("Account created for " + fname + " " + lname + "!");
+            } catch (IllegalArgumentException ex) {
+                System.out.println("Validation failed: " + ex.getMessage());
+            } catch (Exception ex) {
+                System.out.println("This email is already registered.");
             }
         }
+
         else {
-            System.out.println("Invalid choice");
+            System.out.println("Unrecognized input.");
         }
-        session.close();
-        closeSessionFactory();
+
+        dbSession.close();
+        shutdownFactory();
     }
 }
