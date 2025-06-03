@@ -1,6 +1,6 @@
-package app.entry;
+package aut.ap;
 
-import app.models.User;
+import aut.ap.account.User;
 import org.hibernate.query.Query;
 import java.util.Scanner;
 import org.hibernate.Session;
@@ -9,85 +9,85 @@ import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
 
 public class Main {
-    private static SessionFactory factory;
+    private static SessionFactory sessionFactory;
 
-    private static void initializeFactory() {
-        factory = new Configuration()
+    private static void initializeSessionFactory() {
+        sessionFactory = new Configuration()
                 .configure("hibernate.cfg.xml")
                 .buildSessionFactory();
     }
 
-    private static void shutdownFactory() {
-        if (factory != null) factory.close();
+    private static void shutdownSessionFactory() {
+        if (sessionFactory != null) sessionFactory.close();
     }
 
     public static void main(String[] args) {
-        Scanner input = new Scanner(System.in);
-        initializeFactory();
-        Session dbSession = factory.openSession();
+        Scanner scanner = new Scanner(System.in);
+        initializeSessionFactory();
+        Session session = sessionFactory.openSession();
 
-        System.out.println("To log in, enter: L");
-        System.out.print("To register, enter: S\n");
+        System.out.println("Enter L to log in");
+        System.out.print("Enter S to sign up\n");
+        String choice = scanner.nextLine();
 
-        String command = input.nextLine();
-
-        if (command.equalsIgnoreCase("L")) {
-            System.out.print("Email: ");
-            String enteredEmail = input.nextLine();
-            System.out.print("Password: ");
-            String enteredPassword = input.nextLine();
+        if (choice.equalsIgnoreCase("L")) {
+            System.out.print("Enter your email: ");
+            String emailInput = scanner.nextLine();
+            System.out.print("Enter your password: ");
+            String passwordInput = scanner.nextLine();
 
             try {
-                Transaction tx = dbSession.beginTransaction();
-                Query<User> userQuery = dbSession
-                        .createQuery("FROM User WHERE email = :mail", User.class);
-                userQuery.setParameter("mail", enteredEmail);
-                User foundUser = userQuery.uniqueResult();
+                Transaction transaction = session.beginTransaction();
 
-                if (foundUser == null) {
-                    System.out.println("No user found with this email.");
-                } else if (!foundUser.getPassword().equals(enteredPassword)) {
+                Query<User> query = session.createQuery("FROM User WHERE email = :emailParam", User.class);
+                query.setParameter("emailParam", emailInput);
+                User user = query.uniqueResult();
+
+                if (user == null) {
+                    System.out.println("Email not found.");
+                } else if (!user.getPassword().equals(passwordInput)) {
                     System.out.println("Incorrect password.");
                 } else {
-                    System.out.println("Hello, " + foundUser.getFirst_name() + " " + foundUser.getLast_name() + "!");
+                    System.out.println("Hello, " + user.getFirst_name() + " " + user.getLast_name() + "!");
                 }
 
-                tx.commit();
+                transaction.commit();
             } catch (Exception e) {
                 System.out.println("Error: " + e.getMessage());
             }
         }
 
-        else if (command.equalsIgnoreCase("S")) {
-            System.out.print("First Name: ");
-            String fname = input.nextLine();
-            System.out.print("Last Name: ");
-            String lname = input.nextLine();
+        else if (choice.equalsIgnoreCase("S")) {
+            System.out.print("First name: ");
+            String firstName = scanner.nextLine();
+            System.out.print("Last name: ");
+            String lastName = scanner.nextLine();
             System.out.print("Age: ");
-            int age = Integer.parseInt(input.nextLine());
+            int age = Integer.parseInt(scanner.nextLine());
             System.out.print("Email: ");
-            String mail = input.nextLine();
+            String newEmail = scanner.nextLine();
             System.out.print("Password: ");
-            String pass = input.nextLine();
+            String newPassword = scanner.nextLine();
 
             try {
-                Transaction tx = dbSession.beginTransaction();
-                User newUser = new User(fname, lname, age, mail, pass);
-                dbSession.persist(newUser);
-                tx.commit();
-                System.out.println("Account created for " + fname + " " + lname + "!");
-            } catch (IllegalArgumentException ex) {
-                System.out.println("Validation failed: " + ex.getMessage());
-            } catch (Exception ex) {
-                System.out.println("This email is already registered.");
+                Transaction transaction = session.beginTransaction();
+                User newUser = new User(firstName, lastName, age, newEmail, newPassword);
+                session.persist(newUser);
+                transaction.commit();
+
+                System.out.println("Account created for " + newUser.getFirst_name() + " " + newUser.getLast_name() + "!");
+            } catch (IllegalArgumentException e) {
+                System.out.println("Validation error: " + e.getMessage());
+            } catch (Exception e) {
+                System.out.println("An account with this email already exists.");
             }
         }
 
         else {
-            System.out.println("Unrecognized input.");
+            System.out.println("Unknown option.");
         }
 
-        dbSession.close();
-        shutdownFactory();
+        session.close();
+        shutdownSessionFactory();
     }
 }
