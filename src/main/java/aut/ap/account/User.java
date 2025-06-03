@@ -7,14 +7,19 @@ public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
+
     @Basic(optional = false)
     private String first_name;
+
     @Basic(optional = false)
     private String last_name;
+
     @Basic(optional = false)
     private Integer age;
+
     @Basic(optional = false)
     private String email;
+
     @Basic(optional = false)
     private String password;
 
@@ -70,5 +75,4 @@ public class User {
         }
         this.password = password;
     }
-
 }
